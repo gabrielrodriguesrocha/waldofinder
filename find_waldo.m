@@ -1,3 +1,13 @@
+%% Autores:
+% Breno Vinicius Viana de Oliveira - 726498 (1)
+% Gabriel Rodrigues Rocha          - 726518 (2)
+% Henrique Shinki Kodama           - 726537 (3)
+%
+% Contato
+% (1) breno.oliveira@dcomp.sor.ufscar.br
+% (2) gabrielrocha.comp@gmail.com
+% (3) hskodama@gmail.com
+
 %%
 % Limpeza do ambiente
 clc, clear, close all;
@@ -5,8 +15,8 @@ clc, clear, close all;
 %%
 % Abertura das imagens
 
-scenario = 'scenarios/wheresWaldo1.jpg';
-reference = 'references/waldo1.jpg';
+scenario = 'scenarios/wheresWaldo5.jpg';
+reference = 'references/waldo5.jpg';
 
 % Imagem cenário
 image = imread(scenario);
