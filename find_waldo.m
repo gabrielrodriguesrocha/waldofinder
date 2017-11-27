@@ -16,7 +16,7 @@ clc, clear, close all;
 % Abertura das imagens
 
 scenario = 'scenarios/wheresWaldo5.jpg';
-reference = 'references/waldo5.jpg';
+reference = 'references/waldo4.jpg';
 
 % Imagem cenário
 image = imread(scenario);
