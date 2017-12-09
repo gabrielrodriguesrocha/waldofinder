@@ -8,22 +8,31 @@
 % (2) gabrielrocha.comp@gmail.com
 % (3) hskodama@gmail.com
 
-%%
+%% Ínicio
 % Limpeza do ambiente
 clc, clear, close all;
 
-%%
-% Abertura das imagens
-
-scenario = 'scenarios/wheresWaldo5.jpg';
-reference = 'references/waldo4.jpg';
+%% Abertura das imagens
+scenario = 'scenarios/wheresWaldo1.jpg';
+reference = dir('references/*.jpg');
 
 % Imagem cenário
 image = imread(scenario);
 [ih, iw, ~] = size(image);
 
-% Imagem de referência
-ref = imread(reference);
+% Imagens de referência
+files = {reference.name};
+ref = cell(1,numel(files));
+for k=1:numel(files)
+    ref{k} = imread(strcat('references/',files{k}));
+    ref{k} = rgb2gray(ref{k});
+end
+
+% Obtenção do tamanho do Waldo
+waldo_size = 0;
+for k = 1:numel(ref)
+    waldo_size = waldo_size + mean(size(ref{k}))/numel(ref);
+end
 
 % Conversão da imagem cenário de RGB para HSV
 imageHsv = rgb2hsv(image);
@@ -33,12 +42,12 @@ v = imageHsv(:, :, 3);
 
 %%
 % Segmentação por meio de cor
-redStripes = ((h < 0.01) | (h > 0.9)) & (s > 0.7) & (v > 0.7);
+redStripes = ((h < 0.01) | (h > 0.9)) & (s > 0.7) & (v > 0.9);
 whiteStripes = (s < 0.2) & (v > 0.9);
 
 %%
 % Criação de elemento estruturante: linha vertical
-se = strel('line', ih * 0.01, 90);
+se = strel('line', waldo_size * 0.15, 90);
 
 %%
 % Dilatação das listras verticalmente
@@ -52,22 +61,26 @@ figure,imshow(roi), title('Segmentação por tiras vermelhas e brancas.');
 
 %%
 % Remoção de elementos menores ou maiores que não são o Waldo
-roi = bwareaopen(roi, floor((ih * iw)/185^2));
+rg = regionprops(roi, 'Centroid');
+if numel(rg) <= 10 % Tratamento de caso em que o Waldo é muito pequeno
+    roi = imdilate(roi, strel('square', round(waldo_size * 0.1)));
+end
+roi = bwareaopen(roi, floor(waldo_size * 0.9));
 roi = imdilate(roi, se);
 roi = bwareaopen(roi, 20);
-bigger = bwareaopen(roi, floor((ih * iw)/23^2));
+bigger = bwareaopen(roi, floor(25 * waldo_size));
 roi = roi - bigger;
 figure,imshow(roi), title('Remoção de elementos menores que o Waldo.');
 
 %%
 % Remoção de ruído dos objetos resultantes
 roi = roi & (redStripes | whiteStripes);
-roi = imdilate(roi, se);
-roi = bwareaopen(roi, 10);
+roi = imdilate(roi, strel('square', round(waldo_size * 0.1)));
+roi = bwareaopen(roi, 12);
 figure,imshow(roi), title('Dilatação e abertura de elementos restantes.');
 
 %%
-% Obtenção dos centroids da imagem
+% Obtenção dos centroides da imagem
 roi = logical(roi);
 c = regionprops(roi, 'Centroid');
 centroids = cat(1, c.Centroid);
@@ -76,7 +89,6 @@ locus_y = round(centroids(:,1));
 
 x = size(centroids);
 sizeref = size(ref);
-ref = rgb2gray(ref);
 
 %%
 % Busca por Waldo através de iteração e correlação cruzada normalizada
@@ -89,16 +101,21 @@ for i = 1:x(1)
     sizeslice = size(slice);
     
     % Certificação de que o pedaço é maior que a imagem referência
-    if sizeslice(1) >= sizeref(1) && sizeslice(2) >= sizeref(2)
-        C = normxcorr2(ref,slice); % Correlação normalizada cruzada
-        tmp = max(abs(C(:))); % Ponto de máximo
-        if ~exist('cmax','var') % Caso em que nada foi calculado ainda
-            cmax = tmp;
-            coords = [locus_x(i), locus_y(i)];
-        elseif cmax < tmp % Caso em que um ponto maior que o maior anterior foi obtido
-            cmax = tmp;
-            coords = [locus_x(i), locus_y(i)];
+    tmp = zeros(1,numel(ref));
+    for k = 1:numel(ref)
+        sizeref = size(ref{k});
+        if sizeslice(1) >= sizeref(1) && sizeslice(2) >= sizeref(2)
+            C = normxcorr2(ref{k},slice); % Correlação normalizada cruzada
+            tmp(k) = max(C(:)); % Ponto de máximo
         end
+    end
+    
+    if ~exist('cmax','var') % Caso em que nada foi calculado ainda
+        cmax = tmp;
+    	coords = [locus_x(i), locus_y(i)];
+    elseif sum(cmax) < sum(tmp) % Caso em que um ponto maior que o maior anterior foi obtido
+        cmax = tmp;
+        coords = [locus_x(i), locus_y(i)];
     end
     
 end
