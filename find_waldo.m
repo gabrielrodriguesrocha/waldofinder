@@ -1,19 +1,23 @@
-%% Autores:
+%% Waldo Finder
+% https://github.com/gabrielrodriguesrocha/waldofinder
+% 
+% Autores:
 % Breno Vinicius Viana de Oliveira - 726498 (1)
 % Gabriel Rodrigues Rocha          - 726518 (2)
 % Henrique Shinki Kodama           - 726537 (3)
 %
-% Contato
+%% Contato
 % (1) breno.oliveira@dcomp.sor.ufscar.br
 % (2) gabrielrocha.comp@gmail.com
 % (3) hskodama@gmail.com
-
+%
 %% Ínicio
 % Limpeza do ambiente
 clc, clear, close all;
 
 %% Abertura das imagens
-scenario = 'scenarios/wheresWaldo1.jpg';
+tic
+scenario = 'scenarios/wheresWaldo4.jpg';
 reference = dir('references/*.jpg');
 
 % Imagem cenário
@@ -97,24 +101,24 @@ image = rgb2gray(image);
 
 for i = 1:x(1)
     % Obtenção de um pedaço de interesse
-    slice = image(max(1, locus_x(i)-100):min(ih, locus_x(i)+100), max(1, locus_y(i)-100):min(iw, locus_y(i)+100));
-    sizeslice = size(slice);
+    slice = cell(1,numel(ref));
+    slice = cellfun(@(x) (image(max(1, locus_x(i)-100):min(ih, locus_x(i)+100), max(1, locus_y(i)-100):min(iw, locus_y(i)+100))), slice, 'UniformOutput', false);
     
-    % Certificação de que o pedaço é maior que a imagem referência
-    tmp = zeros(1,numel(ref));
-    for k = 1:numel(ref)
-        sizeref = size(ref{k});
-        if sizeslice(1) >= sizeref(1) && sizeslice(2) >= sizeref(2)
-            C = normxcorr2(ref{k},slice); % Correlação normalizada cruzada
-            tmp(k) = max(C(:)); % Ponto de máximo
-        end
+    % Cálculo da correlação normalizada cruzada
+    a = cellfun(@size, ref, 'UniformOutput', false);
+    b = cellfun(@size, slice, 'UniformOutput', false);
+    c = (cell2mat(a) < cell2mat(b));
+    if c(:)
+        res = cellfun(@normxcorr2, ref, slice, 'UniformOutput', false);
+        % Obtenção de pontos máximos
+        maxes = cell2mat(cellfun(@(x) (max(x(:))), res, 'UniformOutput', false));
     end
     
     if ~exist('cmax','var') % Caso em que nada foi calculado ainda
-        cmax = tmp;
+        cmax = maxes;
     	coords = [locus_x(i), locus_y(i)];
-    elseif sum(cmax) < sum(tmp) % Caso em que um ponto maior que o maior anterior foi obtido
-        cmax = tmp;
+    elseif sum(cmax) < sum(maxes) % Caso em que um ponto maior que o maior anterior foi obtido
+        cmax = maxes;
         coords = [locus_x(i), locus_y(i)];
     end
     
@@ -131,3 +135,4 @@ hold off
 % Imagem ampliada de Waldo na imagem cenário
 waldo = color_image(max(1,coords(1)-100):min(ih, coords(1)+100), max(1,coords(2)-100):min(iw, coords(2)+100), :);
 figure,imshow(waldo), title('Waldo!');
+toc
